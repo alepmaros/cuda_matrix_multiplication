@@ -13,8 +13,8 @@
 __global__ void vector_mul(int *a, int *b, int *c) {
     int i, z, sum = 0;
 
-    int coluna = blockIdx.x * blockDim.x + threadIdx.x;
-    int linha =  blockIdx.y * blockDim.y + threadIdx.y;
+    int column = blockIdx.x * blockDim.x + threadIdx.x;
+    int line =  blockIdx.y * blockDim.y + threadIdx.y;
 
     __shared__ int s_a[NLINESPERBLOCK][NCOLUMNSPERBLOCK];
     __shared__ int s_b[NLINESPERBLOCK][NCOLUMNSPERBLOCK];
@@ -32,8 +32,8 @@ __global__ void vector_mul(int *a, int *b, int *c) {
         __syncthreads();
 	}
 
-    //printf("%d %d\n", linha, coluna);
-    c[linha * NLINES + coluna] = sum;
+    //printf("%d %d\n", line, column);
+    c[line * NLINES + column] = sum;
 }
 
 int main(){

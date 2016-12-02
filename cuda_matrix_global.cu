@@ -11,17 +11,17 @@
 __global__ void vector_mul(int *a, int *b, int *c) {
     int i, sum = 0;
 
-    int coluna = blockIdx.x * blockDim.x + threadIdx.x;
-    int linha =  blockIdx.y * blockDim.y + threadIdx.y;
+    int column = blockIdx.x * blockDim.x + threadIdx.x;
+    int line =  blockIdx.y * blockDim.y + threadIdx.y;
 
-    int beginA = NLINES * linha;
-    int beginB = coluna;
+    int beginA = NLINES * line;
+    int beginB = column;
 
     for (i = 0; i < NLINES; i++) {
         sum += a[beginA + i] * b[NLINES * i + beginB];
     }
 
-    c[linha * NLINES + coluna] = sum;
+    c[line * NLINES + column] = sum;
 }
 
 int main(){
