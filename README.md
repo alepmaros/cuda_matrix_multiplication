@@ -18,7 +18,7 @@ Here is a few tests with a GeForce GTX 960M. The times are in seconds.
 
 And here is a plot comparing the two methods
 
-![plot][plot.png]
+![plot](https://raw.githubusercontent.com/Pridexs/cuda_matrix_multiplication/master/plot.png)
 
 # Usage
 
