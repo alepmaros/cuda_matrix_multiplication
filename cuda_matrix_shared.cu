@@ -54,7 +54,6 @@ int main(){
     c = (int *)malloc(size);
 
     for(i = 0; i < NLINES*NCOLUMNS; i++){
-//        a[i] = b[i] = i % 10;
         c[i] = 0;
     }
 
@@ -83,7 +82,7 @@ int main(){
     cudaMemcpy(c, d_c, size, cudaMemcpyDeviceToHost);
     gettimeofday(&timevalB,NULL);
 
-    // print first column
+    // print Matrix
     // for (i = 0; i < NLINES; i++) {
     //     for (j = 0; j < NLINES; j++) {
     //         printf("%d ", c[i * NLINES + j]);
