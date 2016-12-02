@@ -3,6 +3,7 @@
 Cuda Matrix Implementation using Global and Shared memory.
 
 It is really restrict at the moment, here is is the requirements for the Matrices:
+
 1. The number of lines needs to be equal to the number of columns
 2. The number of lines (and columns) needs to be divisible by 32
 
