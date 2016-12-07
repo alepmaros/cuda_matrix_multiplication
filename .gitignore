@@ -5,3 +5,7 @@
 *.cubin
 *.fatbin
 *.o
+matrix_mult_normal.c
+o1
+o2
+input

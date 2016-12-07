@@ -31,7 +31,7 @@ int main(){
     int i, j, n;
 
     struct timeval timevalA;
-	struct timeval timevalB;
+    struct timeval timevalB;
 
     cudaMalloc((void **) &d_a, size);
     cudaMalloc((void **) &d_b, size);

@@ -19,18 +19,18 @@ __global__ void vector_mul(int *a, int *b, int *c) {
     __shared__ int s_a[NLINESPERBLOCK][NCOLUMNSPERBLOCK];
     __shared__ int s_b[NLINESPERBLOCK][NCOLUMNSPERBLOCK];
 
-	for (z = 0; z < gridDim.x; z++) {
+    for (z = 0; z < gridDim.x; z++) {
         s_a[threadIdx.y][threadIdx.x] = a[ (NCOLUMNS * (blockIdx.y * NLINESPERBLOCK + threadIdx.y)) + (z * NCOLUMNSPERBLOCK + threadIdx.x) ];
         s_b[threadIdx.y][threadIdx.x] = b[ (NCOLUMNS * (z * NLINESPERBLOCK + threadIdx.y)) + blockIdx.x * NCOLUMNSPERBLOCK + threadIdx.x ];
 
         __syncthreads();
 
-		for (i = 0; i < NLINESPERBLOCK; i++) {
-	    	sum += s_a[threadIdx.y][i] * s_b[i][threadIdx.x];
-	    }
+        for (i = 0; i < NLINESPERBLOCK; i++) {
+            sum += s_a[threadIdx.y][i] * s_b[i][threadIdx.x];
+        }
 
         __syncthreads();
-	}
+    }
 
     //printf("%d %d\n", line, column);
     c[line * NLINES + column] = sum;
@@ -43,7 +43,7 @@ int main(){
     int i, j, n;
 
     struct timeval timevalA;
-	struct timeval timevalB;
+    struct timeval timevalB;
 
     cudaMalloc((void **) &d_a, size);
     cudaMalloc((void **) &d_b, size);
