@@ -4,25 +4,23 @@ from random import randint
 f = open('input', 'w')
 
 if (len(sys.argv) < 2):
-    print('python3 generate_input.py <nlines> <ncolums>')
+    print('python3 generate_input.py <n>')
     sys.exit()
 
-nl = int(sys.argv[1])
-nc = int(sys.argv[2])
+n = int(sys.argv[1])
 
-f.write(str(nl)+'\n')
-f.write(str(nc)+'\n')
+f.write(str(n)+'\n')
 
-for x in range(0, nl):
-    for y in range(0, nc):
+for x in range(0, n):
+    for y in range(0, n):
         if (y != 0):
             f.write(' ' + str(randint(0, 20) - 10))
         else:
             f.write(str(randint(0, 20) - 10))
     f.write('\n')
 
-for x in range(0, nl):
-    for y in range(0, nc):
+for x in range(0, n):
+    for y in range(0, n):
         if (y != 0):
             f.write(' ' + str(randint(0, 20) - 10))
         else:
