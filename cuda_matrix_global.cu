@@ -3,6 +3,8 @@
  *
  * Cuda Matrix Multiplication with Global Memory.
  *
+ * nvcc cuda_matrix_global.cu -o cg.o 
+ *
  * Implemented by Alexandre Maros for learning purposes.
  * A version of this code using Shared Memory is in here:
  * https://github.com/alepmaros/cuda_matrix_multiplication
@@ -20,7 +22,7 @@
 #define NTHREADS_Y 32
 #define THREADS_PER_BLOCK NTHREADS_X * NTHREADS_Y
 
-__global__ void vector_mul(int *a, int *b, int *c, int a_ncolumns, int c_nlines, int c_ncolumns) {
+__global__ void matrix_mul(int *a, int *b, int *c, int a_ncolumns, int c_nlines, int c_ncolumns) {
 
     int column = blockIdx.x * blockDim.x + threadIdx.x;
     int line =  blockIdx.y * blockDim.y + threadIdx.y;
@@ -120,7 +122,7 @@ int main(){
     #endif
 
     // kernel call
-    vector_mul<<<tbloco,tthreads>>>(d_a, d_b, d_c, a_ncolumns, c_nlines, c_ncolumns);
+    matrix_mul<<<tbloco,tthreads>>>(d_a, d_b, d_c, a_ncolumns, c_nlines, c_ncolumns);
 
     cudaMemcpy(c, d_c, c_size, cudaMemcpyDeviceToHost);
     gettimeofday(&timevalB,NULL);
