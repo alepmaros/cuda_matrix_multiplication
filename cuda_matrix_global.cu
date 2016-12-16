@@ -3,7 +3,7 @@
  *
  * Cuda Matrix Multiplication with Global Memory.
  *
- * nvcc cuda_matrix_global.cu -o cg.o 
+ * nvcc cuda_matrix_global.cu -o cg.o
  *
  * Implemented by Alexandre Maros for learning purposes.
  * A version of this code using Shared Memory is in here:
@@ -37,7 +37,7 @@ __global__ void matrix_mul(int *a, int *b, int *c, int a_ncolumns, int c_nlines,
     int beginA = a_ncolumns * line;
     int beginB = column;
 
-    for (i = 0; i < c_ncolumns; i++) {
+    for (i = 0; i < a_ncolumns; i++) {
         sum += a[beginA + i] * b[i * c_ncolumns + beginB];
     }
 
