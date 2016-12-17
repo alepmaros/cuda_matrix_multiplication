@@ -17,6 +17,11 @@
  #include <time.h>
  #include <sys/time.h>
 
+ //32x32
+ #define NTHREADS_X 32
+ #define NTHREADS_Y 32
+ #define THREADS_PER_BLOCK NTHREADS_X * NTHREADS_Y
+
 // Credit to: http://stackoverflow.com/a/14038590 for the gpuErrchk macro.
 #define gpuErrchk(ans) { gpuAssert((ans), __FILE__, __LINE__); }
 inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=true)
@@ -28,13 +33,9 @@ inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=t
    }
 }
 
-//32x32
-#define NTHREADS_X 32
-#define NTHREADS_Y 32
-#define THREADS_PER_BLOCK NTHREADS_X * NTHREADS_Y
-
 __global__ void matrix_mul(int *a, int *b, int *c, int a_ncolumns, int c_nlines,
-        int c_ncolumns, int nBlocks) {
+        int c_ncolumns, int nBlocks)
+{
     int i, z, sum = 0;
     int nMultiplications = a_ncolumns;
     int multiplicationsInBlock = NTHREADS_Y;
@@ -51,35 +52,28 @@ __global__ void matrix_mul(int *a, int *b, int *c, int a_ncolumns, int c_nlines,
 
     for (z = 0; z < nBlocks; z++) {
 
-        // I check to see if the column and line are within the range of the Matrix C here
-        // because apparently all threads within a block must reach the __syncthreads()
-        // otherwise they get stuck (deadlock). That means that I cannot just use a return; at the
-        // beggining of the kernel.
-        //I am not 100% sure about this but I am leaving it like this for this moment
-        if (column < c_ncolumns && line < c_nlines) {
-            // Load Matrix A
-            a_tLine = (blockIdx.y * NTHREADS_Y + threadIdx.y);
-            a_tColumn = (z * NTHREADS_X + threadIdx.x);
-            if (a_tLine < c_nlines && a_tColumn < a_ncolumns) {
-                s_a[threadIdx.y][threadIdx.x] = a[ (a_ncolumns * a_tLine) + a_tColumn];
-            }
+        // Load Matrix A
+        a_tLine = (blockIdx.y * NTHREADS_Y + threadIdx.y);
+        a_tColumn = (z * NTHREADS_X + threadIdx.x);
+        if (a_tLine < c_nlines && a_tColumn < a_ncolumns) {
+            s_a[threadIdx.y][threadIdx.x] = a[ (a_ncolumns * a_tLine) + a_tColumn];
+        }
 
-
-            // Load Matrix B
-            b_tLine = (z * NTHREADS_Y + threadIdx.y);
-            b_tColumn = (blockIdx.x * NTHREADS_X + threadIdx.x);
-            if (b_tLine < a_ncolumns && b_tColumn < c_ncolumns) {
-                s_b[threadIdx.y][threadIdx.x] = b[ (c_ncolumns * b_tLine) + b_tColumn ];
-            }
+        // Load Matrix B
+        b_tLine = (z * NTHREADS_Y + threadIdx.y);
+        b_tColumn = (blockIdx.x * NTHREADS_X + threadIdx.x);
+        if (b_tLine < a_ncolumns && b_tColumn < c_ncolumns) {
+            s_b[threadIdx.y][threadIdx.x] = b[ (c_ncolumns * b_tLine) + b_tColumn ];
         }
 
         __syncthreads();
 
-        // Check line 43 for an explanation about this if.
+        /* Checkin to see if that thread actually belongs to a valid position in
+         * the Matrix C
+         */
         if (column < c_ncolumns && line < c_nlines) {
             if (nMultiplications < NTHREADS_Y) {
                 multiplicationsInBlock = nMultiplications;
-
             }
 
             for (i = 0; i < multiplicationsInBlock; i++) {
@@ -92,7 +86,9 @@ __global__ void matrix_mul(int *a, int *b, int *c, int a_ncolumns, int c_nlines,
         __syncthreads();
     }
 
-    // Check line 43 for an explanation about this if.
+    /* Checkin to see if that thread actually belongs to a valid position in
+     * the Matrix C
+     */
     if (column < c_ncolumns && line < c_nlines) {
         c[line * c_ncolumns + column] = sum;
     }
@@ -132,9 +128,9 @@ int main(){
     b_size = b_nlines * b_ncolumns * sizeof(int);
     c_size = c_nlines * c_ncolumns * sizeof(int);
 
-    cudaMalloc((void **) &d_a, a_size);
-    cudaMalloc((void **) &d_b, b_size);
-    cudaMalloc((void **) &d_c, c_size);
+    gpuErrchk( cudaMalloc((void **) &d_a, a_size) );
+    gpuErrchk( cudaMalloc((void **) &d_b, b_size) );
+    gpuErrchk( cudaMalloc((void **) &d_c, c_size) );
 
     a = (int *)malloc(a_size);
     b = (int *)malloc(b_size);
@@ -155,12 +151,13 @@ int main(){
     }
 
     gettimeofday(&timevalA,NULL);
-    cudaMemcpy(d_a, a, a_size, cudaMemcpyHostToDevice);
-    cudaMemcpy(d_b, b, b_size, cudaMemcpyHostToDevice);
+
+    gpuErrchk( cudaMemcpy(d_a, a, a_size, cudaMemcpyHostToDevice) );
+    gpuErrchk( cudaMemcpy(d_b, b, b_size, cudaMemcpyHostToDevice) );
 
     dim3 tbloco = dim3(
                     (int) std::ceil( (double) c_ncolumns / NTHREADS_X ),
-                    (int) std::ceil ( (double) c_nlines / NTHREADS_Y ),
+                    (int) std::ceil( (double) c_nlines / NTHREADS_Y ),
                     1
                 );
 
