@@ -129,8 +129,9 @@ int main()
     size_t a_size, b_size, c_size;
     int i, j;
 
-    struct timeval timevalA;
-    struct timeval timevalB;
+    cudaEvent_t start, stop;
+    gpuErrchk( cudaEventCreate(&start) );
+    gpuErrchk( cudaEventCreate(&stop) );
 
     scanf("%d", &a_nlines);
     scanf("%d", &a_ncolumns);
@@ -180,8 +181,6 @@ int main()
         }
     }
 
-    gettimeofday(&timevalA,NULL);
-
     gpuErrchk( cudaMemcpy(d_a, a, a_size, cudaMemcpyHostToDevice) );
     gpuErrchk( cudaMemcpy(d_b, b, b_size, cudaMemcpyHostToDevice) );
 
@@ -202,16 +201,18 @@ int main()
     printf("tthreads.x: %d tthreads.y: %d\n", tthreads.x, tthreads.y);
 #endif
 
+    cudaEventRecord(start);
+
     // kernel call
     matrix_mul<<<tbloco,tthreads>>>(d_a, d_b, d_c, a_ncolumns, c_nlines,
         c_ncolumns, (int) std::ceil( (double) a_ncolumns / NTHREADS_X));
+
     gpuErrchk( cudaPeekAtLastError() );
-
+    gpuErrchk( cudaEventRecord(stop) );
     gpuErrchk( cudaMemcpy(c, d_c, c_size, cudaMemcpyDeviceToHost) );
+    gpuErrchk( cudaEventSynchronize(stop) );
 
-    gettimeofday(&timevalB,NULL);
-
-#ifndef __DEBUG
+#ifndef __NO_OUTPUT
     // print Matrix
     for (i = 0; i < c_nlines; i++)
     {
@@ -225,7 +226,9 @@ int main()
 #endif
 
 #ifdef __TIME
-    printf("%.5lf\n", timevalB.tv_sec-timevalA.tv_sec+(timevalB.tv_usec-timevalA.tv_usec)/(double)1000000);
+    float milliseconds = 0;
+    gpuErrchk( cudaEventElapsedTime(&milliseconds, start, stop) );
+    printf("%.5f\n", milliseconds);
 #endif
 
     free(a); free(b); free(c);
