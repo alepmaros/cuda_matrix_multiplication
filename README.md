@@ -11,20 +11,16 @@ The input follows this pattern:
 5. The values of Matrix A
 6. The values of Matrix B
 
+The Shared method was implemented by dividing the Matrices into blocks.
+
 # Tests
 
-Here is a few tests with a GeForce GTX 960M. The times are in seconds.
+Here is a few tests with a GeForce GTX 960M. The times are in milliseconds.
 
-| Method                        | 1024 Lines | 2048 Lines | 4096 Lines | 6144 Lines |
-|-------------------------------|------------|------------|------------|------------|
-| Serial                        | 8.61027    | 115.55706  | ---        | ---        |
-| CUDA w/ Global Memory         | 0.02713    | 0.20379    | 1.83966    | 6.40315    |
-| CUDA w/ Shared Memory         | 0.01364    | 0.09895    | 0.76345    | 2.54037    |
-
-And here is a plot comparing the two methods
-
-![plot](https://raw.githubusercontent.com/Pridexs/cuda_matrix_multiplication/master/plot.png)
+![plot1](https://raw.githubusercontent.com/alepmaros/cuda_matrix_multiplication/master/plot1.png)
+![plot2](https://raw.githubusercontent.com/alepmaros/cuda_matrix_multiplication/master/plot2.png)
 
 # Usage
 
 0. (optional) Use the script generate_input.py to generate a random Matrix
+1. Compile it & Run it
