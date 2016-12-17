@@ -1,97 +1,203 @@
-#include <stdio.h>
-#include <time.h>
-#include <sys/time.h>
+/*
+ * Alexandre Maros - 2016
+ *
+ * Cuda Matrix Multiplication with Shared Memory.
+ *
+ * nvcc cuda_matrix_shared.cu -o cs.o
+ *
+ * Implemented by Alexandre Maros for learning purposes.
+ * A version of this code using Global Memory is in here:
+ * https://github.com/alepmaros/cuda_matrix_multiplication
+ *
+ * Distributed under the MIT Lincese.
+ */
 
-#define NLINES 6144
-#define NCOLUMNS 6144
-#define THREADS_PER_BLOCK 1024
+ #include <stdio.h>
+ #include <stdlib.h>
+ #include <time.h>
+ #include <sys/time.h>
+
+// Credit to: http://stackoverflow.com/a/14038590 for the gpuErrchk macro.
+#define gpuErrchk(ans) { gpuAssert((ans), __FILE__, __LINE__); }
+inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=true)
+{
+   if (code != cudaSuccess)
+   {
+      fprintf(stderr,"GPUassert: %s %s %d\n", cudaGetErrorString(code), file, line);
+      if (abort) exit(code);
+   }
+}
+
 //32x32
-#define NTHREADS 32
-#define NCOLUMNSPERBLOCK 32
-#define NLINESPERBLOCK 32
+#define NTHREADS_X 32
+#define NTHREADS_Y 32
+#define THREADS_PER_BLOCK NTHREADS_X * NTHREADS_Y
 
-__global__ void vector_mul(int *a, int *b, int *c) {
+__global__ void matrix_mul(int *a, int *b, int *c, int a_ncolumns, int c_nlines,
+        int c_ncolumns, int nBlocks) {
     int i, z, sum = 0;
+    int nMultiplications = a_ncolumns;
+    int multiplicationsInBlock = NTHREADS_Y;
 
     int column = blockIdx.x * blockDim.x + threadIdx.x;
     int line =  blockIdx.y * blockDim.y + threadIdx.y;
 
-    __shared__ int s_a[NLINESPERBLOCK][NCOLUMNSPERBLOCK];
-    __shared__ int s_b[NLINESPERBLOCK][NCOLUMNSPERBLOCK];
+    __shared__ int s_a[NTHREADS_Y][NTHREADS_X];
+    __shared__ int s_b[NTHREADS_Y][NTHREADS_X];
 
-    for (z = 0; z < gridDim.x; z++) {
-        s_a[threadIdx.y][threadIdx.x] = a[ (NCOLUMNS * (blockIdx.y * NLINESPERBLOCK + threadIdx.y)) + (z * NCOLUMNSPERBLOCK + threadIdx.x) ];
-        s_b[threadIdx.y][threadIdx.x] = b[ (NCOLUMNS * (z * NLINESPERBLOCK + threadIdx.y)) + blockIdx.x * NCOLUMNSPERBLOCK + threadIdx.x ];
+    // temporary line and temporary column -
+    // explain this later
+    int a_tLine, a_tColumn, b_tLine, b_tColumn;
+
+    for (z = 0; z < nBlocks; z++) {
+
+        // I check to see if the column and line are within the range of the Matrix C here
+        // because apparently all threads within a block must reach the __syncthreads()
+        // otherwise they get stuck (deadlock). That means that I cannot just use a return; at the
+        // beggining of the kernel.
+        //I am not 100% sure about this but I am leaving it like this for this moment
+        if (column < c_ncolumns && line < c_nlines) {
+            // Load Matrix A
+            a_tLine = (blockIdx.y * NTHREADS_Y + threadIdx.y);
+            a_tColumn = (z * NTHREADS_X + threadIdx.x);
+            if (a_tLine < c_nlines && a_tColumn < a_ncolumns) {
+                s_a[threadIdx.y][threadIdx.x] = a[ (a_ncolumns * a_tLine) + a_tColumn];
+            }
+
+
+            // Load Matrix B
+            b_tLine = (z * NTHREADS_Y + threadIdx.y);
+            b_tColumn = (blockIdx.x * NTHREADS_X + threadIdx.x);
+            if (b_tLine < a_ncolumns && b_tColumn < c_ncolumns) {
+                s_b[threadIdx.y][threadIdx.x] = b[ (c_ncolumns * b_tLine) + b_tColumn ];
+            }
+        }
 
         __syncthreads();
 
-        for (i = 0; i < NLINESPERBLOCK; i++) {
-            sum += s_a[threadIdx.y][i] * s_b[i][threadIdx.x];
+        // Check line 43 for an explanation about this if.
+        if (column < c_ncolumns && line < c_nlines) {
+            if (nMultiplications < NTHREADS_Y) {
+                multiplicationsInBlock = nMultiplications;
+
+            }
+
+            for (i = 0; i < multiplicationsInBlock; i++) {
+                sum += s_a[threadIdx.y][i] * s_b[i][threadIdx.x];
+            }
+
+            nMultiplications -= NTHREADS_Y;
         }
 
         __syncthreads();
     }
 
-    //printf("%d %d\n", line, column);
-    c[line * NLINES + column] = sum;
+    // Check line 43 for an explanation about this if.
+    if (column < c_ncolumns && line < c_nlines) {
+        c[line * c_ncolumns + column] = sum;
+    }
 }
 
 int main(){
     int *a, *b, *c;
     int *d_a, *d_b, *d_c;
-    int size = NLINES * NCOLUMNS * sizeof(int);
-    int i, j, n;
+    int a_nlines, a_ncolumns;
+    int b_nlines, b_ncolumns;
+    int c_nlines, c_ncolumns;
+
+    size_t a_size, b_size, c_size;
+    int i, j;
 
     struct timeval timevalA;
     struct timeval timevalB;
 
-    cudaMalloc((void **) &d_a, size);
-    cudaMalloc((void **) &d_b, size);
-    cudaMalloc((void **) &d_c, size);
+    scanf("%d", &a_nlines);
+    scanf("%d", &a_ncolumns);
+    scanf("%d", &b_nlines);
+    scanf("%d", &b_ncolumns);
 
-    a = (int *)malloc(size);
-    b = (int *)malloc(size);
-    c = (int *)malloc(size);
+    c_nlines = a_nlines;
+    c_ncolumns = b_ncolumns;
 
-    for(i = 0; i < NLINES*NCOLUMNS; i++){
-        c[i] = 0;
+    #ifdef __DEBUG
+        printf("a_nlines: %d\na_ncolumns: %d\nb_nlines: %d\nb_ncolumns: %d\nc_nlines: %d\nc_ncolumns: %d\n", a_nlines, a_ncolumns, b_nlines, b_ncolumns, c_nlines, c_ncolumns);
+    #endif
+
+    if ( a_ncolumns != b_nlines ) {
+        printf("Number of columns in Matrix A should be equals to number of lines in Matrix B\n");
+        return EXIT_FAILURE;
     }
 
-    scanf("%d", &n);
+    a_size = a_nlines * a_ncolumns * sizeof(int);
+    b_size = b_nlines * b_ncolumns * sizeof(int);
+    c_size = c_nlines * c_ncolumns * sizeof(int);
 
-    for (int i = 0; i < NLINES; i++) {
-        for (j = 0; j < NLINES; j++) {
-            scanf("%d", &a[i * NLINES + j]);
+    cudaMalloc((void **) &d_a, a_size);
+    cudaMalloc((void **) &d_b, b_size);
+    cudaMalloc((void **) &d_c, c_size);
+
+    a = (int *)malloc(a_size);
+    b = (int *)malloc(b_size);
+    c = (int *)malloc(c_size);
+
+    memset(c, 0, c_nlines*c_ncolumns*sizeof(int));
+
+    for (i = 0; i < a_nlines; i++) {
+        for (j = 0; j < a_ncolumns; j++) {
+            scanf("%d", &a[i * a_ncolumns + j]);
         }
     }
 
-    for (int i = 0; i < NLINES; i++) {
-        for (j = 0; j < NLINES; j++) {
-            scanf("%d", &b[i * NLINES + j]);
+    for (i = 0; i < b_nlines; i++) {
+        for (j = 0; j < b_ncolumns; j++) {
+            scanf("%d", &b[i * b_ncolumns + j]);
         }
     }
 
     gettimeofday(&timevalA,NULL);
-    cudaMemcpy(d_a, a, size, cudaMemcpyHostToDevice);
-    cudaMemcpy(d_b, b, size, cudaMemcpyHostToDevice);
+    cudaMemcpy(d_a, a, a_size, cudaMemcpyHostToDevice);
+    cudaMemcpy(d_b, b, b_size, cudaMemcpyHostToDevice);
 
-    dim3 tbloco = dim3(NLINES/NTHREADS, NLINES/NTHREADS,1);
-    dim3 tthreads = dim3(NTHREADS, NTHREADS, 1);
-    vector_mul<<<tbloco,tthreads>>>(d_a, d_b, d_c);
+    dim3 tbloco = dim3(
+                    (int) std::ceil( (double) c_ncolumns / NTHREADS_X ),
+                    (int) std::ceil ( (double) c_nlines / NTHREADS_Y ),
+                    1
+                );
 
-    cudaMemcpy(c, d_c, size, cudaMemcpyDeviceToHost);
+    dim3 tthreads = dim3(
+                        NTHREADS_X,
+                        NTHREADS_Y,
+                        1
+                    );
+
+    #ifdef __DEBUG
+        printf("tbloco.x: %d tbloco.y: %d tbloco.z: %d\n", tbloco.x, tbloco.y, tbloco.z);
+        printf("tthreads.x: %d tthreads.y: %d\n", tthreads.x, tthreads.y);
+    #endif
+
+    // kernel call
+    matrix_mul<<<tbloco,tthreads>>>(d_a, d_b, d_c, a_ncolumns, c_nlines,
+        c_ncolumns, (int) std::ceil( (double) a_ncolumns / NTHREADS_X));
+    gpuErrchk( cudaPeekAtLastError() );
+
+    gpuErrchk( cudaMemcpy(c, d_c, c_size, cudaMemcpyDeviceToHost) );
+
     gettimeofday(&timevalB,NULL);
 
-    // print Matrix
-    // for (i = 0; i < NLINES; i++) {
-    //     for (j = 0; j < NLINES; j++) {
-    //         printf("%d ", c[i * NLINES + j]);
-    //     }
-    //     printf("\n");
-    // }
-    //printf("\n");
+    #ifndef __DEBUG
+        // print Matrix
+        for (i = 0; i < c_nlines; i++) {
+            for (j = 0; j < c_ncolumns; j++) {
+                printf("%d ", c[i * c_ncolumns + j]);
+            }
+            printf("\n");
+        }
+        printf("\n");
+    #endif
 
-    printf("%.5lf\n", timevalB.tv_sec-timevalA.tv_sec+(timevalB.tv_usec-timevalA.tv_usec)/(double)1000000);
+    #ifdef __TIME
+        printf("%.5lf\n", timevalB.tv_sec-timevalA.tv_sec+(timevalB.tv_usec-timevalA.tv_usec)/(double)1000000);
+    #endif
 
     free(a); free(b); free(c);
 

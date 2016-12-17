@@ -2,10 +2,14 @@
 
 Cuda Matrix Implementation using Global and Shared memory.
 
-It is really restrict at the moment, here is is the requirements for the Matrices:
+The input follows this pattern:
 
-1. The number of lines needs to be equal to the number of columns
-2. The number of lines (and columns) needs to be divisible by 32
+1. The number of lines of Matrix A
+2. The number of columns of Matrix A
+3. The number of lines of Matrix B
+4. The number of columns of Matrix B
+5. The values of Matrix A
+6. The values of Matrix B
 
 # Tests
 
@@ -24,5 +28,3 @@ And here is a plot comparing the two methods
 # Usage
 
 0. (optional) Use the script generate_input.py to generate a random Matrix
-1. Set the #DEFINE NLINES and NCOLUMNS to the size of your Matrix.
-2. Compile with nvcc
