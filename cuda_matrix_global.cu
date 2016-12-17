@@ -22,6 +22,19 @@
 #define NTHREADS_Y 32
 #define THREADS_PER_BLOCK NTHREADS_X * NTHREADS_Y
 
+/* A macro used for error checking in CUDA function calls
+ * Credit to: http://stackoverflow.com/a/14038590 for the gpuErrchk macro.
+ */
+#define gpuErrchk(ans) { gpuAssert((ans), __FILE__, __LINE__); }
+inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=true)
+{
+   if (code != cudaSuccess)
+   {
+      fprintf(stderr,"GPUassert: %s %s %d\n", cudaGetErrorString(code), file, line);
+      if (abort) exit(code);
+   }
+}
+
 __global__ void matrix_mul(int *a, int *b, int *c, int a_ncolumns, int c_nlines, int c_ncolumns) {
 
     int column = blockIdx.x * blockDim.x + threadIdx.x;
@@ -65,9 +78,9 @@ int main(){
     c_nlines = a_nlines;
     c_ncolumns = b_ncolumns;
 
-    #ifdef __DEBUG
-        printf("a_nlines: %d\na_ncolumns: %d\nb_nlines: %d\nb_ncolumns: %d\nc_nlines: %d\nc_ncolumns: %d\n", a_nlines, a_ncolumns, b_nlines, b_ncolumns, c_nlines, c_ncolumns);
-    #endif
+#ifdef __DEBUG
+    printf("a_nlines: %d\na_ncolumns: %d\nb_nlines: %d\nb_ncolumns: %d\nc_nlines: %d\nc_ncolumns: %d\n", a_nlines, a_ncolumns, b_nlines, b_ncolumns, c_nlines, c_ncolumns);
+#endif
 
     if ( a_ncolumns != b_nlines ) {
         printf("Number of columns in Matrix A should be equals to number of lines in Matrix B\n");
@@ -78,9 +91,9 @@ int main(){
     b_size = b_nlines * b_ncolumns * sizeof(int);
     c_size = c_nlines * c_ncolumns * sizeof(int);
 
-    cudaMalloc((void **) &d_a, a_size);
-    cudaMalloc((void **) &d_b, b_size);
-    cudaMalloc((void **) &d_c, c_size);
+    gpuErrchk( cudaMalloc((void **) &d_a, a_size) );
+    gpuErrchk( cudaMalloc((void **) &d_b, b_size) );
+    gpuErrchk( cudaMalloc((void **) &d_c, c_size) );
 
     a = (int *)malloc(a_size);
     b = (int *)malloc(b_size);
@@ -101,8 +114,8 @@ int main(){
     }
 
     gettimeofday(&timevalA,NULL);
-    cudaMemcpy(d_a, a, a_size, cudaMemcpyHostToDevice);
-    cudaMemcpy(d_b, b, b_size, cudaMemcpyHostToDevice);
+    gpuErrchk( cudaMemcpy(d_a, a, a_size, cudaMemcpyHostToDevice) );
+    gpuErrchk( cudaMemcpy(d_b, b, b_size, cudaMemcpyHostToDevice) );
 
     dim3 tbloco = dim3(
                     (int) std::ceil( (double) c_ncolumns / NTHREADS_X ),
@@ -116,31 +129,32 @@ int main(){
                         1
                     );
 
-    #ifdef __DEBUG
-        printf("tbloco.x: %d tbloco.y: %d tbloco.z: %d\n", tbloco.x, tbloco.y, tbloco.z);
-        printf("tthreads.x: %d tthreads.y: %d\n", tthreads.x, tthreads.y);
-    #endif
+#ifdef __DEBUG
+    printf("tbloco.x: %d tbloco.y: %d tbloco.z: %d\n", tbloco.x, tbloco.y, tbloco.z);
+    printf("tthreads.x: %d tthreads.y: %d\n", tthreads.x, tthreads.y);
+#endif
 
     // kernel call
     matrix_mul<<<tbloco,tthreads>>>(d_a, d_b, d_c, a_ncolumns, c_nlines, c_ncolumns);
+    gpuErrchk( cudaPeekAtLastError() );
 
-    cudaMemcpy(c, d_c, c_size, cudaMemcpyDeviceToHost);
+    gpuErrchk( cudaMemcpy(c, d_c, c_size, cudaMemcpyDeviceToHost) );
     gettimeofday(&timevalB,NULL);
 
-    #ifndef __DEBUG
-        // print Matrix
-        for (i = 0; i < c_nlines; i++) {
-            for (j = 0; j < c_ncolumns; j++) {
-                printf("%d ", c[i * c_ncolumns + j]);
-            }
-            printf("\n");
+#ifndef __DEBUG
+    // print Matrix
+    for (i = 0; i < c_nlines; i++) {
+        for (j = 0; j < c_ncolumns; j++) {
+            printf("%d ", c[i * c_ncolumns + j]);
         }
         printf("\n");
-    #endif
+    }
+    printf("\n");
+#endif
 
-    #ifdef __TIME
+#ifdef __TIME
         printf("%.5lf\n", timevalB.tv_sec-timevalA.tv_sec+(timevalB.tv_usec-timevalA.tv_usec)/(double)1000000);
-    #endif
+#endif
 
     free(a); free(b); free(c);
 

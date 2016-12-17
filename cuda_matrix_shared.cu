@@ -132,9 +132,9 @@ int main(){
     c_nlines = a_nlines;
     c_ncolumns = b_ncolumns;
 
-    #ifdef __DEBUG
-        printf("a_nlines: %d\na_ncolumns: %d\nb_nlines: %d\nb_ncolumns: %d\nc_nlines: %d\nc_ncolumns: %d\n", a_nlines, a_ncolumns, b_nlines, b_ncolumns, c_nlines, c_ncolumns);
-    #endif
+#ifdef __DEBUG
+    printf("a_nlines: %d\na_ncolumns: %d\nb_nlines: %d\nb_ncolumns: %d\nc_nlines: %d\nc_ncolumns: %d\n", a_nlines, a_ncolumns, b_nlines, b_ncolumns, c_nlines, c_ncolumns);
+#endif
 
     if ( a_ncolumns != b_nlines ) {
         printf("Number of columns in Matrix A should be equals to number of lines in Matrix B\n");
@@ -184,10 +184,10 @@ int main(){
                         1
                     );
 
-    #ifdef __DEBUG
-        printf("tbloco.x: %d tbloco.y: %d tbloco.z: %d\n", tbloco.x, tbloco.y, tbloco.z);
-        printf("tthreads.x: %d tthreads.y: %d\n", tthreads.x, tthreads.y);
-    #endif
+#ifdef __DEBUG
+    printf("tbloco.x: %d tbloco.y: %d tbloco.z: %d\n", tbloco.x, tbloco.y, tbloco.z);
+    printf("tthreads.x: %d tthreads.y: %d\n", tthreads.x, tthreads.y);
+#endif
 
     // kernel call
     matrix_mul<<<tbloco,tthreads>>>(d_a, d_b, d_c, a_ncolumns, c_nlines,
@@ -198,20 +198,20 @@ int main(){
 
     gettimeofday(&timevalB,NULL);
 
-    #ifndef __DEBUG
-        // print Matrix
-        for (i = 0; i < c_nlines; i++) {
-            for (j = 0; j < c_ncolumns; j++) {
-                printf("%d ", c[i * c_ncolumns + j]);
-            }
-            printf("\n");
+#ifndef __DEBUG
+    // print Matrix
+    for (i = 0; i < c_nlines; i++) {
+        for (j = 0; j < c_ncolumns; j++) {
+            printf("%d ", c[i * c_ncolumns + j]);
         }
         printf("\n");
-    #endif
+    }
+    printf("\n");
+#endif
 
-    #ifdef __TIME
-        printf("%.5lf\n", timevalB.tv_sec-timevalA.tv_sec+(timevalB.tv_usec-timevalA.tv_usec)/(double)1000000);
-    #endif
+#ifdef __TIME
+    printf("%.5lf\n", timevalB.tv_sec-timevalA.tv_sec+(timevalB.tv_usec-timevalA.tv_usec)/(double)1000000);
+#endif
 
     free(a); free(b); free(c);
 
