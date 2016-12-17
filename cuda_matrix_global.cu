@@ -35,14 +35,14 @@ inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=t
    }
 }
 
-__global__ void matrix_mul(int *a, int *b, int *c, int a_ncolumns, int c_nlines, int c_ncolumns) {
+__global__ void matrix_mul(int *a, int *b, int *c, int a_ncolumns, int c_nlines, int c_ncolumns)
+{
 
     int column = blockIdx.x * blockDim.x + threadIdx.x;
     int line =  blockIdx.y * blockDim.y + threadIdx.y;
 
-    if (column  >= c_ncolumns || line >= c_nlines) {
+    if (column  >= c_ncolumns || line >= c_nlines)
         return;
-    }
 
     int i, sum = 0;
 
@@ -50,7 +50,8 @@ __global__ void matrix_mul(int *a, int *b, int *c, int a_ncolumns, int c_nlines,
     int beginA = a_ncolumns * line;
     int beginB = column;
 
-    for (i = 0; i < a_ncolumns; i++) {
+    for (i = 0; i < a_ncolumns; i++)
+    {
         sum += a[beginA + i] * b[i * c_ncolumns + beginB];
     }
 
@@ -82,7 +83,8 @@ int main(){
     printf("a_nlines: %d\na_ncolumns: %d\nb_nlines: %d\nb_ncolumns: %d\nc_nlines: %d\nc_ncolumns: %d\n", a_nlines, a_ncolumns, b_nlines, b_ncolumns, c_nlines, c_ncolumns);
 #endif
 
-    if ( a_ncolumns != b_nlines ) {
+    if ( a_ncolumns != b_nlines )
+    {
         printf("Number of columns in Matrix A should be equals to number of lines in Matrix B\n");
         return EXIT_FAILURE;
     }
@@ -101,14 +103,18 @@ int main(){
 
     memset(c, 0, c_nlines*c_ncolumns*sizeof(int));
 
-    for (i = 0; i < a_nlines; i++) {
-        for (j = 0; j < a_ncolumns; j++) {
+    for (i = 0; i < a_nlines; i++)
+    {
+        for (j = 0; j < a_ncolumns; j++)
+        {
             scanf("%d", &a[i * a_ncolumns + j]);
         }
     }
 
-    for (i = 0; i < b_nlines; i++) {
-        for (j = 0; j < b_ncolumns; j++) {
+    for (i = 0; i < b_nlines; i++)
+    {
+        for (j = 0; j < b_ncolumns; j++)
+        {
             scanf("%d", &b[i * b_ncolumns + j]);
         }
     }
@@ -143,8 +149,10 @@ int main(){
 
 #ifndef __DEBUG
     // print Matrix
-    for (i = 0; i < c_nlines; i++) {
-        for (j = 0; j < c_ncolumns; j++) {
+    for (i = 0; i < c_nlines; i++)
+    {
+        for (j = 0; j < c_ncolumns; j++)
+        {
             printf("%d ", c[i * c_ncolumns + j]);
         }
         printf("\n");

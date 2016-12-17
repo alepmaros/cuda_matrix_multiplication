@@ -67,19 +67,22 @@ __global__ void matrix_mul(int *a, int *b, int *c, int a_ncolumns, int c_nlines,
      */
     int a_tLine, a_tColumn, b_tLine, b_tColumn;
 
-    for (z = 0; z < nBlocks; z++) {
+    for (z = 0; z < nBlocks; z++)
+    {
 
         // Load Matrix A
         a_tLine = (blockIdx.y * NTHREADS_Y + threadIdx.y);
         a_tColumn = (z * NTHREADS_X + threadIdx.x);
-        if (a_tLine < c_nlines && a_tColumn < a_ncolumns) {
+        if (a_tLine < c_nlines && a_tColumn < a_ncolumns)
+        {
             s_a[threadIdx.y][threadIdx.x] = a[ (a_ncolumns * a_tLine) + a_tColumn];
         }
 
         // Load Matrix B
         b_tLine = (z * NTHREADS_Y + threadIdx.y);
         b_tColumn = (blockIdx.x * NTHREADS_X + threadIdx.x);
-        if (b_tLine < a_ncolumns && b_tColumn < c_ncolumns) {
+        if (b_tLine < a_ncolumns && b_tColumn < c_ncolumns)
+        {
             s_b[threadIdx.y][threadIdx.x] = b[ (c_ncolumns * b_tLine) + b_tColumn ];
         }
 
@@ -88,12 +91,15 @@ __global__ void matrix_mul(int *a, int *b, int *c, int a_ncolumns, int c_nlines,
         /* Checkin to see if that thread actually belongs to a valid position in
          * the Matrix C
          */
-        if (column < c_ncolumns && line < c_nlines) {
-            if (nMultiplications < NTHREADS_Y) {
+        if (column < c_ncolumns && line < c_nlines)
+        {
+            if (nMultiplications < NTHREADS_Y)
+            {
                 multiplicationsInBlock = nMultiplications;
             }
 
-            for (i = 0; i < multiplicationsInBlock; i++) {
+            for (i = 0; i < multiplicationsInBlock; i++)
+            {
                 sum += s_a[threadIdx.y][i] * s_b[i][threadIdx.x];
             }
 
@@ -106,12 +112,14 @@ __global__ void matrix_mul(int *a, int *b, int *c, int a_ncolumns, int c_nlines,
     /* Checkin to see if that thread actually belongs to a valid position in
      * the Matrix C
      */
-    if (column < c_ncolumns && line < c_nlines) {
+    if (column < c_ncolumns && line < c_nlines)
+    {
         c[line * c_ncolumns + column] = sum;
     }
 }
 
-int main(){
+int main()
+{
     int *a, *b, *c;
     int *d_a, *d_b, *d_c;
     int a_nlines, a_ncolumns;
@@ -136,7 +144,8 @@ int main(){
     printf("a_nlines: %d\na_ncolumns: %d\nb_nlines: %d\nb_ncolumns: %d\nc_nlines: %d\nc_ncolumns: %d\n", a_nlines, a_ncolumns, b_nlines, b_ncolumns, c_nlines, c_ncolumns);
 #endif
 
-    if ( a_ncolumns != b_nlines ) {
+    if ( a_ncolumns != b_nlines )
+    {
         printf("Number of columns in Matrix A should be equals to number of lines in Matrix B\n");
         return EXIT_FAILURE;
     }
@@ -155,14 +164,18 @@ int main(){
 
     memset(c, 0, c_nlines*c_ncolumns*sizeof(int));
 
-    for (i = 0; i < a_nlines; i++) {
-        for (j = 0; j < a_ncolumns; j++) {
+    for (i = 0; i < a_nlines; i++)
+    {
+        for (j = 0; j < a_ncolumns; j++)
+        {
             scanf("%d", &a[i * a_ncolumns + j]);
         }
     }
 
-    for (i = 0; i < b_nlines; i++) {
-        for (j = 0; j < b_ncolumns; j++) {
+    for (i = 0; i < b_nlines; i++)
+    {
+        for (j = 0; j < b_ncolumns; j++)
+        {
             scanf("%d", &b[i * b_ncolumns + j]);
         }
     }
@@ -200,8 +213,10 @@ int main(){
 
 #ifndef __DEBUG
     // print Matrix
-    for (i = 0; i < c_nlines; i++) {
-        for (j = 0; j < c_ncolumns; j++) {
+    for (i = 0; i < c_nlines; i++)
+    {
+        for (j = 0; j < c_ncolumns; j++)
+        {
             printf("%d ", c[i * c_ncolumns + j]);
         }
         printf("\n");
