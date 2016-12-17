@@ -12,17 +12,19 @@
  * Distributed under the MIT Lincese.
  */
 
- #include <stdio.h>
- #include <stdlib.h>
- #include <time.h>
- #include <sys/time.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
+#include <sys/time.h>
 
- //32x32
- #define NTHREADS_X 32
- #define NTHREADS_Y 32
- #define THREADS_PER_BLOCK NTHREADS_X * NTHREADS_Y
+// 32x32 Threads in a block.
+#define NTHREADS_X 32
+#define NTHREADS_Y 32
+#define THREADS_PER_BLOCK NTHREADS_X * NTHREADS_Y
 
-// Credit to: http://stackoverflow.com/a/14038590 for the gpuErrchk macro.
+/* A macro used for error checking in CUDA function calls
+ * Credit to: http://stackoverflow.com/a/14038590 for the gpuErrchk macro.
+ */
 #define gpuErrchk(ans) { gpuAssert((ans), __FILE__, __LINE__); }
 inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=true)
 {
@@ -37,7 +39,17 @@ __global__ void matrix_mul(int *a, int *b, int *c, int a_ncolumns, int c_nlines,
         int c_ncolumns, int nBlocks)
 {
     int i, z, sum = 0;
+
+    /* How many multiplications there will be for each value in Matrix C
+     * This corresponds to the number of columns in Matrix A (or number of)
+     * lines in Matrix B
+     */
     int nMultiplications = a_ncolumns;
+
+    /* Each iteration of the block will multiply NTHREADS_Y values. This value
+     * Can be less then NTHREADS_Y if the number of a_ncolumns is not divisible
+     * by NTHREADS_Y. This value is used to control that.
+     */
     int multiplicationsInBlock = NTHREADS_Y;
 
     int column = blockIdx.x * blockDim.x + threadIdx.x;
@@ -46,8 +58,13 @@ __global__ void matrix_mul(int *a, int *b, int *c, int a_ncolumns, int c_nlines,
     __shared__ int s_a[NTHREADS_Y][NTHREADS_X];
     __shared__ int s_b[NTHREADS_Y][NTHREADS_X];
 
-    // temporary line and temporary column -
-    // explain this later
+    /* temporary line and temporary column
+     * Each thread is responsible for loading one value in the matrix A and
+     * Matrix B. These variables are used to hold which line and column of the
+     * original Matrices they are suppose to load. I also need to check if those
+     * values that they will load actually correspond to a valid position in the
+     * original Matrix.
+     */
     int a_tLine, a_tColumn, b_tLine, b_tColumn;
 
     for (z = 0; z < nBlocks; z++) {
