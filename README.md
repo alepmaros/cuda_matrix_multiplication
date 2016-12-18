@@ -17,7 +17,12 @@ The Shared method was implemented by dividing the Matrices into blocks.
 
 Here is a few tests with a GeForce GTX 960M. The times are in milliseconds.
 
+I ran the test 7 times for each line number and then averaged it.
+
 ![plot1](https://raw.githubusercontent.com/alepmaros/cuda_matrix_multiplication/master/plot1.png)
+
+And the difference in time between global and shared memory.
+
 ![plot2](https://raw.githubusercontent.com/alepmaros/cuda_matrix_multiplication/master/plot2.png)
 
 # Usage
